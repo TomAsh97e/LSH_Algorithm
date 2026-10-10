@@ -1,3 +1,0 @@
-/home/tomash/CLionProjects/LSH_algo/build/CMakeFiles/LSH_algo.dir
-/home/tomash/CLionProjects/LSH_algo/build/CMakeFiles/edit_cache.dir
-/home/tomash/CLionProjects/LSH_algo/build/CMakeFiles/rebuild_cache.dir

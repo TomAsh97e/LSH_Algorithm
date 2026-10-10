@@ -1,0 +1,10 @@
+# CMake
+build/
+cmake-build-*/
+
+# Pliki kompilacji
+*.o
+/main
+
+# Ustawienia IDE
+.idea/

@@ -1,0 +1,5 @@
+How to reduce memory usage in a C++ program?
+Ways to optimize RAM consumption.
+The weather is sunny today.
+How does a hash table work?
+Memory optimization techniques for applications.

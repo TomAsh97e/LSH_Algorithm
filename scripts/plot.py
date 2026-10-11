@@ -37,3 +37,50 @@ fig.suptitle("LSH parameter tuning (N=10,000)")
 fig.tight_layout()
 fig.savefig(output_path, dpi=160)
 print(f"Saved {output_path}")
+plt.close(fig)
+
+test_csv_path = project_dir / "benchmark" / "test_results.csv"
+test_output_path = project_dir / "benchmark" / "test_performance.png"
+
+with test_csv_path.open(newline="", encoding="utf-8") as file:
+    test_results = list(csv.DictReader(file))
+
+document_counts = sorted({int(row["N"]) for row in test_results})
+configs = [(8, 8), (16, 8), (16, 6)]
+fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+exact_times = []
+for document_count in document_counts:
+    group = [row for row in test_results if int(row["N"]) == document_count]
+    exact_times.append(sum(float(row["exact_us"]) for row in group) / len(group))
+
+axes[0].plot(document_counts, exact_times, marker="o", linewidth=2, label="Exact Search")
+
+for tables, bits in configs:
+    lsh_times = []
+    recalls = []
+
+    for document_count in document_counts:
+        group = [row for row in test_results if int(row["N"]) == document_count
+                 and int(row["L"]) == tables and int(row["b"]) == bits]
+        lsh_times.append(sum(float(row["lsh_us"]) for row in group) / len(group))
+        recalls.append(sum(float(row["recall"]) for row in group) / len(group))
+
+    label = f"LSH L={tables}, b={bits}"
+    axes[0].plot(document_counts, lsh_times, marker="o", label=label)
+    axes[1].plot(document_counts, recalls, marker="o", label=label)
+
+axes[0].set(title="Average query time", xlabel="Document count", ylabel="Time [us]")
+axes[0].set_yscale("log")
+axes[1].set(title="Search quality", xlabel="Document count", ylabel="Recall@10", ylim=(0, 1))
+
+for axis in axes:
+    axis.set_xscale("log")
+    axis.set_xticks(document_counts, labels=[str(count) for count in document_counts])
+    axis.grid(alpha=0.3)
+    axis.legend()
+
+fig.suptitle("Final test results (3 seeds, 200 queries)")
+fig.tight_layout()
+fig.savefig(test_output_path, dpi=160)
+print(f"Saved {test_output_path}")

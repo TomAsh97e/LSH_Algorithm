@@ -29,3 +29,8 @@ add_test(
     NAME LSH_tests
     COMMAND LSH_tests
 )
+
+add_executable(LSH_benchmark
+    benchmark/benchmark.cpp
+)
+target_link_libraries(LSH_benchmark PRIVATE lsh_core)

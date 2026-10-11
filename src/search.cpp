@@ -12,8 +12,8 @@ std::vector<SearchResult> exactSearch(const std::vector<float>& asked,
         for(size_t i = 0; i < embeddings.size(); i += d){
             SearchResult candidate;
             candidate.id = i/d;
-            std::vector<float> sub(embeddings.begin() + i, embeddings.begin() + i + d);
-            candidate.score = dot(asked, sub);
+            //std::vector<float> sub(embeddings.begin() + i, embeddings.begin() + i + d);
+            candidate.score = dot_perf(embeddings, asked, i/d, d);
             if(minHeap.size() < k){minHeap.push(candidate);}
             else if(minHeap.top().score < candidate.score){
                 minHeap.pop();
@@ -38,8 +38,8 @@ std::vector<SearchResult> CandidateRank(const std::vector<float>& asked, const s
             if(candidate >= embeddings.size()/d) throw std::invalid_argument("candidate id too big");
             SearchResult tmp{};
             tmp.id = candidate;
-            std::vector<float> sub (embeddings.begin()+candidate*d, embeddings.begin() + candidate*d + d);
-            tmp.score = dot(sub, asked);
+            //std::vector<float> sub (embeddings.begin()+candidate*d, embeddings.begin() + candidate*d + d);
+            tmp.score = dot_perf(embeddings, asked, candidate, d);
             if(minHeap.size() < k){minHeap.push(tmp);}
             else if(tmp > minHeap.top()){
                 minHeap.pop();

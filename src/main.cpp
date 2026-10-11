@@ -1,24 +1,48 @@
-#include <cstdint>
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "data_loader.hpp"
 #include "lsh_index.hpp"
 #include "search.hpp"
 
-void printResults(
-    const char* name,
-    const std::vector<SearchResult>& results
-) {
-    std::cout << name << '\n';
+std::vector<std::string> loadLines(const std::string& path) {
+    std::ifstream file(path);
 
-    for (const auto& result : results) {
+    if (!file.is_open()) {
+        throw std::runtime_error("cannot open file: " + path);
+    }
+
+    std::vector<std::string> lines;
+    std::string line;
+
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
+
+    if (file.bad()) {
+        throw std::runtime_error("cannot read file: " + path);
+    }
+
+    return lines;
+}
+
+void printResults(const char* name,const std::vector<SearchResult>& results,
+    const std::vector<std::string>& documentTexts, const std::vector<std::string>& documentIds) {
+    
+    std::cout << '\n' << name << '\n';
+
+    for (std::size_t rank = 0; rank < results.size(); ++rank) {
+        const auto& result = results[rank];
+
         std::cout
-            << "id: " << result.id
-            << ", score: " << result.score
-            << '\n';
+            << rank + 1 << ". "
+            << "dataset id: " << documentIds[result.id]
+            << ", score: " << result.score << '\n'
+            << documentTexts[result.id] << "\n\n";
     }
 }
 
@@ -27,9 +51,18 @@ int main() {
         const auto documents = load("data/documents.bin");
         const auto query = load("data/query.bin");
 
-        if (query.count != 1) {
+        const auto documentTexts =
+            loadLines("data/documents.txt");
+
+        const auto documentIds =
+            loadLines("data/document_ids.txt");
+
+        const auto queryTexts =
+            loadLines("data/query.txt");
+
+        if (query.count != 1 || queryTexts.size() != 1) {
             throw std::runtime_error(
-                "query.bin must contain exactly one embedding"
+                "query files must contain exactly one query"
             );
         }
 
@@ -39,15 +72,30 @@ int main() {
             );
         }
 
-        const int d = static_cast<int>(documents.d);
+        if (documentTexts.size() != documents.count ||
+            documentIds.size() != documents.count) {
+            throw std::runtime_error(
+                "document files have different sizes"
+            );
+        }
+
         constexpr int k = 3;
+        constexpr int tables = 8;
+        constexpr int bits = 4;
+        constexpr std::uint32_t seed = 12345;
+
+        const int d = static_cast<int>(documents.d);
+
+        std::cout
+            << "Documents: " << documents.count << '\n'
+            << "Query: " << queryTexts[0] << '\n';
 
         const auto index = index_builder(
             documents.embeddings,
             d,
-            8,
-            4,
-            12345
+            tables,
+            bits,
+            seed
         );
 
         const auto exactResults = exactSearch(
@@ -64,8 +112,19 @@ int main() {
             k
         );
 
-        printResults("Exact search:", exactResults);
-        printResults("LSH search:", lshResults);
+        printResults(
+            "Exact search:",
+            exactResults,
+            documentTexts,
+            documentIds
+        );
+
+        printResults(
+            "LSH search:",
+            lshResults,
+            documentTexts,
+            documentIds
+        );
     } catch (const std::exception& error) {
         std::cerr << "Error: " << error.what() << '\n';
         return 1;

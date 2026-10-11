@@ -17,6 +17,7 @@ struct lsh_index_t{
 uint64_t signatureFromVector(const std::vector<float>& documentVector, const std::vector<std::vector<float>> &hyperplanes);
 
 float dot(const std::vector<float>& a, const std::vector<float>& b);
+float dot_perf(const std::vector<float>& embeddings, const std::vector<float>& asked, std::size_t i, int d);
 
 bool dotToBit(float dotProduct);
 

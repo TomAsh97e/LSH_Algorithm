@@ -10,3 +10,5 @@ cmake-build-*/
 .idea/
 
 .venv/
+
+data/

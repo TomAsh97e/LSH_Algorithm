@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 #include "data_loader.hpp"
@@ -30,6 +31,18 @@ int main() {
         assert(signatureFromVector(documents[i], hyperplanes) == expected[i]);
         std::cout << signatureFromVector(documents[i], hyperplanes) << std::endl;
     }
+
+    std::vector<std::vector<float>> sixtyFourHyperplanes(
+        64,
+        std::vector<float>{-1.0F}
+    );
+    sixtyFourHyperplanes[0][0] = 1.0F;
+    sixtyFourHyperplanes[63][0] = 1.0F;
+
+    const auto firstAndLastBit =
+        (std::uint64_t{1} << 0) | (std::uint64_t{1} << 63);
+    assert(signatureFromVector({1.0F}, sixtyFourHyperplanes) ==
+           firstAndLastBit);
 
     const std::vector<float> lshEmbeddings{
          2.0F,  1.0F,
@@ -144,6 +157,10 @@ int main() {
     assert(top2[0].id == 0 && top2[0].score == 1.0F);
     assert(top2[1].id == 3 && top2[1].score == 1.0F);
 
+    const auto top1 = exactSearch(query, embeddings, 2, 1);
+    assert(top1.size() == 1);
+    assert(top1[0].id == 0 && top1[0].score == 1.0F);
+
     const auto all = exactSearch(query, embeddings, 2, 10);
     assert(all.size() == 4);
     assert(all[0].id == 0);
@@ -241,7 +258,58 @@ int main() {
     }
     assert(extraDataThrown);
 
+    const auto writeTestEmbedding = [&loaderTestFile](
+        std::uint64_t n,
+        std::uint64_t d,
+        const std::vector<float>& values
+    ) {
+        std::ofstream output(
+            loaderTestFile,
+            std::ios::binary | std::ios::trunc
+        );
+        output.write(reinterpret_cast<const char*>(&n), sizeof(n));
+        output.write(reinterpret_cast<const char*>(&d), sizeof(d));
+        output.write(
+            reinterpret_cast<const char*>(values.data()),
+            values.size() * sizeof(float)
+        );
+        assert(output);
+    };
+
+    const auto loadFails = [&loaderTestFile]() {
+        try {
+            load(loaderTestFile);
+        } catch (const std::exception&) {
+            return true;
+        }
+        return false;
+    };
+
+    writeTestEmbedding(2, 3, {1.0F, 2.0F, 3.0F, 4.0F, 5.0F});
+    const bool truncatedFileRejected = loadFails();
+
+    writeTestEmbedding(
+        1,
+        2,
+        {std::numeric_limits<float>::quiet_NaN(), 1.0F}
+    );
+    const bool nanRejected = loadFails();
+
+    writeTestEmbedding(
+        1,
+        2,
+        {std::numeric_limits<float>::infinity(), 1.0F}
+    );
+    const bool infinityRejected = loadFails();
+
+    writeTestEmbedding(1, 2, {0.0F, 0.0F});
+    const bool zeroVectorRejected = loadFails();
+
     std::filesystem::remove(loaderTestFile);
-    
+
+    assert(truncatedFileRejected);
+    assert(nanRejected);
+    assert(infinityRejected);
+    assert(zeroVectorRejected);
 
 }

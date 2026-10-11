@@ -2,6 +2,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <limits>
+#include <cmath>
 
 embeddingData load (const std::filesystem::path& source){
 
@@ -29,6 +30,25 @@ embeddingData load (const std::filesystem::path& source){
     if(file.peek() != std::ifstream::traits_type::eof()){
         throw std::runtime_error("more data after floats");
     }
+    const std::size_t dimension = static_cast<std::size_t>(d);
+
+    for (std::size_t start = 0; start < values.size(); start += dimension) {
+        bool nonZero = false;
+
+        for (std::size_t i = start; i < start + dimension; ++i) {
+            if (!std::isfinite(values[i])) {
+                throw std::invalid_argument("embedding contains NaN or infinity");
+            }
+
+            if (values[i] != 0.0F) {
+            nonZero = true;
+            }
+        }
+
+        if (!nonZero) {
+            throw std::invalid_argument("embedding is a zero vector");
+        }
+    }  
     embeddingData res{n, d, std::move(values)};
     return res;
 }

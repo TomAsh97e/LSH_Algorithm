@@ -25,6 +25,15 @@ float dot(const std::vector<float>& a, const std::vector<float>& b){
     }
     return result;
 }
+float dot_perf(const std::vector<float>& embeddings, const std::vector<float>& asked, std::size_t i, int d){
+    float res{};
+    const std::size_t start = i* static_cast<std::size_t>(d);
+    for(int k = 0; k < d; k++){
+        res += embeddings[start+k]*asked[k];
+    }
+    return res;
+}
+
 
 bool dotToBit(float dotProduct){
     return dotProduct >= 0 ? true : false;

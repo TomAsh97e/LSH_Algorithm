@@ -30,7 +30,7 @@ std::vector<SearchResult> exactSearch(const std::vector<float>& asked,
     }
 
 std::vector<SearchResult> CandidateRank(const std::vector<float>& asked, const std::vector<float>& embeddings,
-    int d, std::vector<size_t> candidates, int k){
+    int d, const std::vector<size_t>& candidates, int k){
         if(d <= 0 || k <= 0 || asked.size() != d || embeddings.size() % d != 0) {
             throw std::invalid_argument("d or k not > 0 or d or embeddings values are worng");}
         std::priority_queue<SearchResult, std::vector<SearchResult>, std::greater<SearchResult>> minHeap;

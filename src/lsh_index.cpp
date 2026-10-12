@@ -16,6 +16,19 @@ uint64_t signatureFromVector(const std::vector<float>& documentVector, const std
     return res;
 }
 
+uint64_t signatureFromVector_perf(const std::vector<float>& embeddings, const std::vector<std::vector<float>>& hyperplanes, std::size_t n, int d){
+    uint64_t res = 0;
+    if(hyperplanes.size() > 64 || hyperplanes.size() < 1) throw std::invalid_argument("More than 64 hyperplanes or less than 1");
+    std::bitset<64> bits(res);
+    for(size_t i =0; i < hyperplanes.size(); i++){
+        if(dotToBit(dot_perf(embeddings, hyperplanes[i], n ,d))){
+            bits.set(i);
+        }
+    }
+    res = bits.to_ullong();
+    return res;
+}
+
 float dot(const std::vector<float>& a, const std::vector<float>& b){
     if(a.size() != b.size()) throw std::invalid_argument("Vectors have differnt siezes");
     if(a.size() == 0) throw std::invalid_argument("Vectors have size 0"); 
@@ -28,8 +41,10 @@ float dot(const std::vector<float>& a, const std::vector<float>& b){
 float dot_perf(const std::vector<float>& embeddings, const std::vector<float>& asked, std::size_t i, int d){
     float res{};
     const std::size_t start = i* static_cast<std::size_t>(d);
+    const float* document = embeddings.data() + start;
+    const float* query = asked.data();
     for(int k = 0; k < d; k++){
-        res += embeddings[start+k]*asked[k];
+        res += document[k] * query[k];
     }
     return res;
 }
@@ -45,15 +60,14 @@ std::unordered_map<uint64_t, std::vector<std::size_t>> lsh_builder (const std::v
             throw std::invalid_argument("d not > 0 or d or embeddings values are worng");}
         int docsCount = embeddings.size()/d;
         std::unordered_map<uint64_t, std::vector<std::size_t>> res;
+        for (const auto& hyperplane : hyperplanes) {
+            if (hyperplane.size() != static_cast<std::size_t>(d)) {
+                throw std::invalid_argument("wrong hyperplane dimension");
+            }
+        }
         for(int i = 0; i < docsCount; i++){
-            std::vector<float> sub;
-            uint64_t sig = 0;
-            size_t id = 0;
-            sub.assign(embeddings.begin()+i*d, embeddings.begin()+i*d+d);
-            sig = signatureFromVector(sub,hyperplanes);
-            id = i;
-            res[sig].push_back(id);
-            sub.clear();
+            const auto sig = signatureFromVector_perf(embeddings, hyperplanes, i, d);
+            res[sig].push_back(i);
         }
         return res;
     }
@@ -76,6 +90,7 @@ lsh_index_t index_builder(const std::vector<float>& embeddings, int d, int l, in
     std::uint32_t seed){
         if(l <= 0) throw std::invalid_argument("wrong l value");
         lsh_index_t res{};
+        res.collection.reserve(l);
         res.d = d;
         if(d <= 0 || embeddings.size() % d != 0) throw std::invalid_argument("wrong d value");
         res.documentCount = embeddings.size()/d;
@@ -83,7 +98,7 @@ lsh_index_t index_builder(const std::vector<float>& embeddings, int d, int l, in
             lsh_t tmp{};
             tmp.hyperplanes = hyperPlaneGen(b, d, seed + i);
             tmp.lsh_map = lsh_builder(embeddings, d, tmp.hyperplanes);
-            res.collection.push_back(tmp);
+            res.collection.push_back(std::move(tmp));
         }
         return res;
 
@@ -94,20 +109,20 @@ std::vector<std::size_t> candidateCollect(const lsh_index_t& index,
     const std::vector<float>& asked){
         if(asked.size() != index.d) throw std::invalid_argument("wrog d");
         std::vector<std::size_t> res{};
-        std::vector<std::size_t>seen(index.documentCount);
-        uint64_t sig{};
+        std::vector<std::uint8_t>seen(index.documentCount, 0);
         for(const auto& a : index.collection){
-            sig = signatureFromVector(asked, a.hyperplanes);
-            if(a.lsh_map.find(sig) != a.lsh_map.end()){
-                auto it  = a.lsh_map.find(sig);
-                std::vector<size_t> ids = it -> second;
-                for(const auto& id : ids){
-                    if(seen[id] == 0){
-                    seen[id] = 1;
-                    res.push_back(id);
-                    }
+            const auto sig = signatureFromVector(asked, a.hyperplanes);
+            const auto it  = a.lsh_map.find(sig);
+            if(it == a.lsh_map.end()){continue;} 
+
+            const auto& ids = it -> second;
+
+            for(const auto& id : ids){
+                if(seen[id] != 0){continue;}
+
+                seen[id] = 1;
+                res.push_back(id);
                 }
             }
-        }
-        return res;
-    }
+    return res;
+}

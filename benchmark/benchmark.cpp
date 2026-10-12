@@ -56,7 +56,7 @@ int main() {
             queryVectors.emplace_back(queries.embeddings.begin() + start, queries.embeddings.begin() + start + queries.d);
         }
 
-        std::ofstream csv("benchmark/test_results.csv");
+        std::ofstream csv("benchmark/test_results_optimized.csv");
         if (!csv) throw std::runtime_error("cannot open CSV");
         csv << "N,L,b,seed,query_id,exact_us,lsh_us,candidates,recall,build_ms\n";
 
@@ -137,7 +137,7 @@ int main() {
         }
 
         if (!csv) throw std::runtime_error("CSV write failed");
-        std::cout << "Saved benchmark/test_results.csv\n";
+        std::cout << "Saved benchmark/test_results_optimized.csv\n";
     } catch (const std::exception& error) {
         std::cerr << "error: " << error.what() << '\n';
         return 1;

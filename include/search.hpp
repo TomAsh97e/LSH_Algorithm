@@ -19,7 +19,7 @@ std::vector<SearchResult> exactSearch(const std::vector<float>& asked, const std
 
 
 std::vector<SearchResult> CandidateRank(const std::vector<float>& asked, const std::vector<float>& embeddings,
-    int d, std::vector<size_t> candidates, int k);
+    int d, const std::vector<size_t>& candidates, int k);
 
 std::vector<SearchResult> lshSearch(const std::vector<float>& asked, const std::vector<float>& embeddings,
     const lsh_index_t& index , int k);
